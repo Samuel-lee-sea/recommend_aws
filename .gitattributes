@@ -1,0 +1,4 @@
+src/main/resources/static/ratings.csv filter=lfs diff=lfs merge=lfs -text
+src/main/resources/static/tags.csv filter=lfs diff=lfs merge=lfs -text
+src/main/resources/static/movies.csv filter=lfs diff=lfs merge=lfs -text
+src/main/resources/static/links.csv filter=lfs diff=lfs merge=lfs -text
