@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cloud.recommend.mapper.LinksMapper">
+
+    <insert id="insert" parameterType="com.cloud.recommend.entity.LinksEntity">
+        INSERT INTO links (movieId, imdbId, tmdbId) VALUES (#{movieId}, #{imdbId}, #{tmdbId})
+    </insert>
+
+    <select id="findAll" resultType="com.cloud.recommend.entity.LinksEntity">
+        SELECT * FROM links
+    </select>
+
+    <select id="getTotalCount" resultType="long">
+        SELECT COUNT(*) AS totalCount FROM links
+    </select>
+
+    <!-- insertBatch --> 
+
+    <insert id="insertBatch">
+        INSERT INTO links (movieId, imdbId, tmdbId)
+        VALUES
+        <foreach collection="links" item="link" separator=",">
+            (#{link.movieId}, #{link.imdbId}, #{link.tmdbId})
+        </foreach>
+    </insert>
+
+    <!-- findLinksById --> 
+
+    <select id="findLinksById"  parameterType="long" resultType="com.cloud.recommend.entity.LinksEntity">
+        SELECT * FROM links where movieId = #{movieId} limit 1
+    </select>
+
+</mapper>

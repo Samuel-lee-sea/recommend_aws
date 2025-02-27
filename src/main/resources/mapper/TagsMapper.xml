@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cloud.recommend.mapper.TagsMapper">
+
+    <insert id="insert" parameterType="com.cloud.recommend.entity.TagsEntity">
+        INSERT INTO tags (userId, movieId, tag, timestamp) VALUES (#{userId}, #{movieId}, #{tag}, #{timestamp})
+    </insert>
+
+    <select id="findAll" resultType="com.cloud.recommend.entity.TagsEntity">
+        SELECT * FROM tags
+    </select>
+
+    <select id="getTotalCount" resultType="long">
+        SELECT COUNT(*) AS totalCount FROM tags
+    </select>
+
+    <insert id="insertBatch">
+            INSERT INTO tags (userId, movieId, tag, timestamp)
+        VALUES
+        <foreach collection="tags" item="tag" separator=",">
+            (#{tag.userId}, #{tag.movieId}, #{tag.tag}, #{tag.timestamp})
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            tag = VALUES(tag),
+            timestamp = VALUES(timestamp);
+    </insert>
+</mapper>

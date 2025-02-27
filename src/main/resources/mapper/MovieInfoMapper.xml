@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cloud.recommend.mapper.MovieInfoMapper">
+
+    <select id="getMovieWithGenres" resultMap="MovieResultMap">
+        SELECT m.*, GROUP_CONCAT(g.genre) AS genres
+        FROM movies m
+        LEFT JOIN movies_genres mg ON m.movieId = mg.movieId
+        LEFT JOIN genres g ON mg.genreId = g.genreId
+        WHERE m.movieId = #{movieId}
+        GROUP BY m.movieId
+    </select>
+
+    <resultMap id="MovieResultMap" type="com.cloud.recommend.entity.MovieInfoEntity">
+        <result property="movieId" column="movieId"/>
+        <result property="title" column="title"/>
+        <result property="genres" column="genres" typeHandler="com.cloud.recommend.typehandler.StringToListTypeHandler"/>
+    </resultMap>
+
+</mapper>

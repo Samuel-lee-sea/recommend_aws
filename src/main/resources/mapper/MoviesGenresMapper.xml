@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cloud.recommend.mapper.MoviesGenresMapper">
+
+    <insert id="insert" parameterType="com.cloud.recommend.entity.MoviesGenresEntity">
+        INSERT INTO movies_genres (movieId, genreId) VALUES (#{movieId}, #{genreId})
+    </insert>
+
+    <select id="findAll" resultType="com.cloud.recommend.entity.MoviesGenresEntity">
+        SELECT * FROM movies_genres
+    </select>
+
+    <insert id="insertBatch">
+       INSERT INTO movies_genres (movieId, genreId)
+       VALUES
+       <foreach collection="moviesGenresBatch" item="item" separator=",">
+           (#{item.movieId}, #{item.genreId})
+       </foreach>
+   </insert>
+
+</mapper>

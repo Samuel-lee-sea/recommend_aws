@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cloud.recommend.mapper.RatingMapper">
+
+     <insert id="insert" parameterType="com.cloud.recommend.entity.RatingEntity">
+        INSERT INTO ratings (userId, movieId, rating, timestamp)
+        VALUES (#{userId}, #{movieId}, #{rating}, #{timestamp})
+    </insert>
+
+    <select id="getTotalCount" resultType="long">
+        SELECT COUNT(*) FROM ratings
+    </select>
+
+    <select id="findByUserIdAndMovieId" parameterType="map" resultType="com.cloud.recommend.entity.RatingEntity">
+        SELECT * FROM ratings WHERE userId = #{userId} AND movieId = #{movieId}
+    </select>
+
+    <select id="findAll" resultType="com.cloud.recommend.entity.RatingEntity">
+        SELECT * FROM ratings
+    </select>
+
+    <!-- insertBatch --> 
+
+    <insert id="insertBatch">
+        INSERT INTO ratings (userId, movieId, rating, timestamp)
+        VALUES
+        <foreach collection="ratings" item="rating" separator=",">
+            (#{rating.userId}, #{rating.movieId}, #{rating.rating}, #{rating.timestamp})
+        </foreach>
+    </insert>
+
+    <!-- findByMovieId --> 
+
+    <select id="findByMovieId" resultType="com.cloud.recommend.entity.RatingAve">
+        SELECT AVG(rating) AS average_rating, movieId
+        FROM ratings
+        WHERE movieId = #{movieId}
+        GROUP BY movieId
+    </select>
+</mapper> 

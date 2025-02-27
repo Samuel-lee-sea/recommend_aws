@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cloud.recommend.mapper.GenreMapper">
+
+    <insert id="insert" parameterType="String">
+        INSERT INTO genres (genre) VALUES (#{genre})
+    </insert>
+
+    <select id="findAll" resultType="com.cloud.recommend.entity.GenreEntity">
+        SELECT * FROM genres
+    </select>
+
+    <select id="findById" parameterType="int" resultType="com.cloud.recommend.entity.GenreEntity">
+        SELECT * FROM genres WHERE genreId = #{genreId}
+    </select>
+
+    <select id="findByName" parameterType="String" resultType="int">
+        SELECT genreId FROM genres WHERE genre = #{genre}
+    </select>
+
+</mapper>
