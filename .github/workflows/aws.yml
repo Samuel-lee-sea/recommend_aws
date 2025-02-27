@@ -1,0 +1,122 @@
+name: Continuous Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: AWS_DEPLOYMENT
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: Install Packer
+      - name: Install Packer
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          sudo apt update && sudo apt install -y packer
+
+      # Step 3: Build the project with Maven
+      - name: Build the project
+        run: |
+          mvn clean install -DskipTests
+          mkdir -p packer
+          cp target/assignment-0.0.1-SNAPSHOT.jar packer/webapp.jar
+
+      # Step 4: Set up AWS CLI to interact with AWS
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2  
+
+      # Step 5: Validate Packer Template
+      - name: Validate Packer Template
+        working-directory: ./packer
+        run: |
+          packer init .
+          packer validate .
+        env:
+          DB_USERNAME: ${{ secrets.DATABASE_USER_NAME }}
+          DB_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+
+      # Step 6: Build AMI with Packer
+      - name: Build AMI with Packer
+        working-directory: ./packer
+        run: |
+          packer build .
+        env:
+          DB_USERNAME: ${{ secrets.DATABASE_USER_NAME }}
+          DB_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+
+      # Step 7: Deploy to EC2 (SSH to EC2 and transfer the JAR)
+      - name: Deploy to EC2
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          # Install SSH client
+          sudo apt-get install -y openssh-client
+          
+          # Start the SSH agent
+          eval $(ssh-agent -s)
+          
+          # Add SSH private key to the SSH agent
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          
+          # Set correct permissions for the private key
+          chmod 700 ~/.ssh
+          chmod 600 ~/.ssh/id_rsa
+          
+          # Add EC2 host to known hosts to avoid SSH prompt
+          ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
+
+          # Copy the JAR file to EC2
+          scp -i ~/.ssh/id_rsa target/assignment-0.0.1-SNAPSHOT.jar ubuntu@${{ secrets.EC2_PUBLIC_IP }}:/home/ubuntu/assignments/assignment-0.0.1-SNAPSHOT.jar
+          
+          # SSH into EC2 and set environment variables
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+            echo "export DB_USERNAME=${{ secrets.DATABASE_USER_NAME }}" | sudo tee -a /etc/environment
+            echo "export DB_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" | sudo tee -a /etc/environment
+            echo "export APP_USERNAME=${{ vars.WEBAPP_TEST_EMAIL }}" | sudo tee -a /etc/environment
+            echo "export APP_PASSWORD=${{ vars.WEBAPP_TEST_PWD }}" | sudo tee -a /etc/environment
+            echo "export APP_BASEURL=${{ secrets.WEBAPP_TEST_BASEURL }}" | sudo tee -a /etc/environment
+            echo "export DB_IP=${{ secrets.MYSQL_PRIVATE_IP }}" | sudo tee -a /etc/environment
+            sudo chmod 644 /etc/environment
+            source /etc/environment
+          EOF
+
+          # Restart the application
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC_IP }} "sudo lsof -t -i:8080 | xargs -r sudo kill -9"
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_PUBLIC_IP }} "tmux new-session -d 'java -jar /home/ubuntu/assignments/assignment-0.0.1-SNAPSHOT.jar'"
+
+      # Step 8: Setup Grader Variables (create grader-env.txt)
+      - name: Setup Variables for Grader
+        run: |
+          echo "SSH_HOST=${{ secrets.EC2_PUBLIC_IP }}" > grader-env.txt
+          echo "SSH_USER=ubuntu" >> grader-env.txt
+          echo "WEBAPP_HOST=${{ secrets.EC2_PUBLIC_IP }}" >> grader-env.txt
+          echo "WEBAPP_USER=ubuntu" >> grader-env.txt
+          echo "MYSQL_PRIVATE_IP=${{ secrets.MYSQL_PRIVATE_IP }}" >> grader-env.txt
+          echo "DATABASE_USER_NAME=${{ secrets.DATABASE_USER_NAME }}" >> grader-env.txt
+          echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> grader-env.txt
+          echo "MOVIE_INGEST_COMMAND='ssh -i private_key.pem ubuntu@${{ secrets.EC2_SSH_IP }} \${{ secrets.MOVIE_INGEST_COMMAND }}'" >> grader-env.txt
+
+      # Step 9: Upload Grader Environment Variables
+      - name: Upload Grader Environment Variables
+        uses: actions/upload-artifact@v4
+        with:
+          name: grader-env
+          path: grader-env.txt
+
+      - name: Clean Up JAR from Local
+        run: |
+          rm -f packer/webapp.jar
